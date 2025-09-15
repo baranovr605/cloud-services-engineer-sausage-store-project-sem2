@@ -1,0 +1,82 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+spec:
+  serviceName: postgresql
+  selector:
+    matchLabels:
+      app: postgresql
+  replicas: {{ .Values.postgresql.replicas }}
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: {{ .Values.postgresql.image }}
+          ports:
+            - containerPort: {{ .Values.postgresql.network.port }}
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: POSTGRES_DB
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+{{ toYaml .Values.postgresql.resources | indent 12 }}
+      initContainers:
+        - name: cleanup-data-dir
+          image: alpine:3.14
+          command: [ "sh", "-c", "rm -rf /var/lib/postgresql/data/*" ]
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+{{ toYaml .Values.postgresql.resources | indent 12 }}
+  volumeClaimTemplates:
+  - metadata:
+      name: postgresql-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.postgresql.storage }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgresql-secret
+type: Opaque
+stringData:
+  POSTGRES_DB: "{{ .Values.postgresql.env.POSTGRES_DB }}"
+  POSTGRES_USER: "{{ .Values.postgresql.env.POSTGRES_USER }}"
+  POSTGRES_PASSWORD: "{{ .Values.postgresql.env.POSTGRES_PASSWORD }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-service
+spec:
+  selector:
+      app: postgresql
+  ports:
+    - protocol: {{ .Values.postgresql.network.protocol }}
+      port: {{ .Values.postgresql.network.port }}
+      targetPort: {{ .Values.postgresql.network.port }}
+  clusterIP: None
