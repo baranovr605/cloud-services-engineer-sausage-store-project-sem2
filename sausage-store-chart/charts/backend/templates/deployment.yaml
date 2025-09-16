@@ -59,6 +59,11 @@ spec:
                 configMapKeyRef:
                   name: {{ .Release.Name }}-{{ .Chart.Name }}-conf
                   key: log_path
+            - name: SPRING_DATA_MONGODB_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-{{ .Chart.Name }}-conf
+                  key: mongo_uri
           resources:
 {{ toYaml .Values.resources | indent 12 }} 
           ports:
@@ -92,6 +97,6 @@ spec:
     kind: Deployment
     name: {{ .Release.Name }}-{{ .Chart.Name }}
   updatePolicy:
-{{ toYaml .Values.vpa.updatePolicy | indent 4 }} 
+{{ toYaml .Values.vpa.updatePolicy | indent 4 }}
   resourcePolicy:
-{{ toYaml .Values.vpa.resourcePolicy | indent 4 }} 
+{{ toYaml .Values.vpa.resourcePolicy | indent 4 }}
